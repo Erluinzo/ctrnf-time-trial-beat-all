@@ -19,7 +19,7 @@
   "files": [
     {
       "file": "README.txt",
-      "sha256": "0a6ee50d5473cf26dc8f64ef199ed498e689af1d880ec84ad88071d01fdf20b8",
+      "sha256": "599429024b0225efd9c3abf497c5f5a40370bb2be1071db10e006c3e2745f2f2",
       "bytes": 1212
     },
     {
@@ -29,7 +29,7 @@
     },
     {
       "file": "patches/TimeTrialBeatAll.xml",
-      "sha256": "42d4b8301cc96752411df77ddd3b13772925e4dacfcbd75fa98e4ebeebf47ae4",
+      "sha256": "b83acbee60f65e1b319e74e5fd3e09eda0d51b5d89bc8392fe2fccceffad512b",
       "bytes": 1487
     }
   ]
