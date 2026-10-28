@@ -12,6 +12,8 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ELF = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE.parent.parent / 'CTRNF/out/eboot.elf'
 XML = HERE / 'package/patches/TimeTrialBeatAll.xml'
+# The owner tests each build at once: a copy goes into the game's patches folder, switched on.
+TEST_COPY = HERE.parent.parent / 'CTRNF/patches/TimeTrialBeatAll.xml'
 EBOOT_BASE = 0x400000       # patch XML addresses are ELF addresses + 0x400000
 
 HOOK = 0xfcc890             # the game's "unlock the next ghost" step, 23 bytes up to 0xfcc8a7
@@ -58,7 +60,7 @@ def main():
         return (f'      <Line Type="bytes" Address="{va + EBOOT_BASE:#010x}" Value="{value.hex()}"'
                 f'{extra} ExpectedSHA256="{sha}" />')
 
-    XML.write_text(f'''<?xml version="1.0" encoding="utf-8"?>
+    xml = f'''<?xml version="1.0" encoding="utf-8"?>
 <!-- Built by build.py from src/beat_all.s: edit those, not this file.
      Line 1: at the end of a Time Trial, the ghost manager (ELF 0xfcc430) unlocks only the ghost
      after the one you raced. The hook replaces that step with a call to line 2.
@@ -75,8 +77,12 @@ def main():
     </PatchList>
   </Metadata>
 </Patch>
-''', encoding='utf-8')
+'''
+    XML.write_text(xml, encoding='utf-8')
     print(f'{XML.relative_to(HERE)}: hook {len(hook)} bytes at {HOOK:#x}, code {len(cave)} bytes at {CAVE:#x}')
+    if TEST_COPY.parent.is_dir():
+        TEST_COPY.write_text(xml.replace('AppElf="eboot.bin">', 'AppElf="eboot.bin" isEnabled="true">'), encoding='utf-8')
+        print(f'test copy, switched on: {TEST_COPY}')
 
 
 if __name__ == '__main__':
