@@ -1,4 +1,4 @@
-Time Trial: Beat Every Ghost at Once 0.1.1
+Time Trial: Beat Every Ghost at Once 1.0.0
 Author: Onur
 
 In Time Trial the game unlocks only one ghost per race: the one after the ghost you
