@@ -1,4 +1,4 @@
-Time Trial: Beat Every Ghost at Once 1.0.0
+Time Trial: Beat Every Ghost at Once 1.0.1
 Author: Onur
 
 In Time Trial the game unlocks only one ghost per race: the one after the ghost you
@@ -23,5 +23,9 @@ INSTALL: Mods > Add files, choose this ZIP, enable it, fully restart the game.
 UNINSTALL: disable or remove it. Ghosts you already unlocked stay unlocked.
 Back up your save first.
 
-NOT CHANGED: race stats and challenges that count beating a ghost ("beat_..._ghost")
-still count only the ghost you raced.
+Every ghost that counts as beaten also counts for challenges that count beaten
+ghosts, as if you had raced it.
+
+CHANGES
+1.0.1: ghosts beaten together with the raced one now also count for challenges
+(1.0.0 counted only the raced ghost there). Unlocks were already correct.

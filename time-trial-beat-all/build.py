@@ -20,6 +20,9 @@ HOOK = 0xfcc890             # the game's "unlock the next ghost" step, 23 bytes 
 HOOK_END = 0xfcc8a7
 HOOK_ORIGINAL = bytes.fromhex('488b55c0 8b4a0c 413b4d34 750a ffc1 894a0c 41c6453001')
 CAVE = 0x2338000            # unused zero padding at the end of the code segment (0x2317810-0x233c078)
+# Game data the code reads (RIP-relative, so the linker must know the addresses)
+GAME_DATA = {'g_players': 0x2ad1160, 'g_stats': 0x2aa48c0, 'beat_ntropy_ghost': 0x1cdb1d7,
+             'beat_oxide_ghost': 0x1cdb1e9, 'beat_velo_ghost': 0x1cdb1fa, 'beat_dev_ghost': 0x1cdb20a}
 
 
 def read(elf, va, n):
@@ -31,7 +34,8 @@ def assemble():
     with tempfile.TemporaryDirectory() as tmp:
         obj, out, binary = (Path(tmp) / name for name in ('a.o', 'a.elf', 'a.bin'))
         subprocess.run(['as', '--64', '-o', obj, HERE / 'src/beat_all.s'], check=True)
-        subprocess.run(['ld', '-Ttext=%#x' % CAVE, '-e', 'beat_all', '-o', out, obj], check=True)
+        subprocess.run(['ld', '-Ttext=%#x' % CAVE, '-e', 'beat_all', '-o', out, obj,
+                        *[f'--defsym={name}={address:#x}' for name, address in GAME_DATA.items()]], check=True)
         subprocess.run(['objcopy', '-O', 'binary', '-j', '.text', out, binary], check=True)
         return binary.read_bytes()
 
@@ -70,7 +74,7 @@ def main():
   <TitleID><ID>CUSA13795</ID></TitleID>
   <Metadata Title="Crash Team Racing Nitro-Fueled" Name="Time Trial: Beat Every Ghost at Once"
             Note="One Time Trial run unlocks every ghost slower than your time, not only the next one."
-            Author="Onur" PatchVer="1.0.0" AppVer="01.21" AppElf="eboot.bin">
+            Author="Onur" PatchVer="1.0.1" AppVer="01.21" AppElf="eboot.bin">
     <PatchList>
 {line(HOOK, hook, signature)}
 {line(CAVE, cave)}

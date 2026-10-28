@@ -11,7 +11,8 @@ import re, struct, sys, unittest
 from pathlib import Path
 from unicorn import Uc, UC_ARCH_X86, UC_MODE_64, UC_HOOK_CODE
 from unicorn.x86_const import UC_X86_REG_RAX, UC_X86_REG_RBX, UC_X86_REG_R12, UC_X86_REG_R13, \
-    UC_X86_REG_RBP, UC_X86_REG_RSP
+    UC_X86_REG_RBP, UC_X86_REG_RSP, UC_X86_REG_RDI, UC_X86_REG_RSI, UC_X86_REG_RDX, UC_X86_REG_RCX, \
+    UC_X86_REG_R8, UC_X86_REG_R9, UC_X86_REG_R14, UC_X86_REG_R15
 
 HERE = Path(__file__).resolve().parent
 GAME = HERE.parent.parent / 'CTRNF'
@@ -19,6 +20,10 @@ XML = (HERE / 'package/patches/TimeTrialBeatAll.xml').read_text()
 LINES = {int(a, 16) - 0x400000: bytes.fromhex(v) for a, v in re.findall(r'Address="(0x[0-9a-f]+)" Value="([0-9a-f]+)"', XML)}
 CAVE = 0x2338000
 FIND_LEVEL_GHOSTS = 0xf9b970
+ADD_STAT, G_PLAYERS, G_STATS = 0xaa2310, 0x2ad1160, 0x2aa48c0
+STAT_NAMES = {0x1cdb1d7: 'beat_ntropy_ghost', 0x1cdb1e9: 'beat_oxide_ghost', 0x1cdb1fa: 'beat_velo_ghost',
+              0x1cdb20a: 'beat_dev_ghost'}
+STATS_OBJECT, PLAYERS = 0x2aa5000, 0x2ad2000
 DATA, STACK, RETURN = 0x10000000, 0x20000000, 0x30000000
 
 
@@ -30,12 +35,28 @@ def ghost_file(seconds):
 ROOS = [ghost_file(t) for t in (94.195679, 83.653442, 79.178345, 76.877319)]
 
 
-def run(index, raced, my_time, files=ROOS, have_level=True):
-    """Index of the track record after the race and the _unlockedNewGhost flag."""
+def run(index, raced, my_time, files=ROOS, have_level=True, player_types=(3,), stats=None):
+    """Index of the track record after the race and the _unlockedNewGhost flag. Stat calls go to
+    `stats` as (name, player number in player_types or None)."""
     uc = Uc(UC_ARCH_X86, UC_MODE_64)
-    for base in (CAVE & ~0xfff, FIND_LEVEL_GHOSTS & ~0xfff, DATA, STACK, RETURN):
-        uc.mem_map(base, 0x10000)
+    for base in (CAVE & ~0xfff, FIND_LEVEL_GHOSTS & ~0xfff, DATA, STACK, RETURN, ADD_STAT & ~0xfff,
+                 0x1cdb000, 0x2aa4000, 0x2ad1000):
+        uc.mem_map(base, 0x2000 if base in (0x2aa4000, 0x2ad1000) else 0x10000)
     uc.mem_write(CAVE, LINES[CAVE])
+    for address, name in STAT_NAMES.items():
+        uc.mem_write(address, name.encode() + b'\0')
+    # g_stats -> stats object; g_players -> object, +0x10 list (+0xc count, +0x20 items), item +0x20 type
+    uc.mem_write(G_STATS, struct.pack('<Q', STATS_OBJECT))
+    uc.mem_write(G_PLAYERS, struct.pack('<Q', PLAYERS))
+    player_list, player_items = PLAYERS + 0x100, PLAYERS + 0x200
+    uc.mem_write(PLAYERS + 0x10, struct.pack('<Q', player_list))
+    uc.mem_write(player_list + 0xc, struct.pack('<i', len(player_types)))
+    uc.mem_write(player_list + 0x20, struct.pack('<Q', player_items))
+    players = [PLAYERS + 0x400 + 0x40 * i for i in range(len(player_types))]
+    for i, kind in enumerate(player_types):
+        uc.mem_write(player_items + 8 * i, struct.pack('<Q', players[i]))
+        uc.mem_write(players[i] + 0x20, struct.pack('<I', kind))
+    uc.mem_write(ADD_STAT, b'\xc3')                            # ret
 
     manager, record, entry, ghost_list, items, ghosts = (DATA + 0x100 * i for i in range(6))
     names = DATA + 0x2000
@@ -61,20 +82,34 @@ def run(index, raced, my_time, files=ROOS, have_level=True):
     rsp = rbp - 0x100 - 8                   # the caller's body is 16-byte aligned; then the call
     uc.mem_write(rsp, struct.pack('<Q', RETURN))
     for reg, value in ((UC_X86_REG_RBP, rbp), (UC_X86_REG_RSP, rsp), (UC_X86_REG_R13, manager),
-                       (UC_X86_REG_RAX, 0x1111111111111101), (UC_X86_REG_RBX, 0x2222), (UC_X86_REG_R12, 0x3333)):
+                       (UC_X86_REG_RAX, 0x1111111111111101), (UC_X86_REG_RBX, 0x2222), (UC_X86_REG_R12, 0x3333),
+                       (UC_X86_REG_R14, 0x4444), (UC_X86_REG_R15, 0x5555)):
         uc.reg_write(reg, value)
 
-    misaligned = []
+    misaligned, calls = [], []
     def on_call(uc, address, size, _):
         if (uc.reg_read(UC_X86_REG_RSP) + 8) % 16:
             misaligned.append(address)
+        if address == ADD_STAT:
+            # the game's call: (stats, name, player, 0, 0, 1)
+            r = [uc.reg_read(x) for x in (UC_X86_REG_RDI, UC_X86_REG_RSI, UC_X86_REG_RDX, UC_X86_REG_RCX,
+                                          UC_X86_REG_R8, UC_X86_REG_R9)]
+            assert r[0] == STATS_OBJECT and r[3] == 0 and r[4] == 0 and r[5] & 0xffffffff == 1, 'bad stat call'
+            calls.append((STAT_NAMES[r[1]], players.index(r[2]) if r[2] else None))
+            # the call may change every caller-saved register
+            for x in (UC_X86_REG_RDI, UC_X86_REG_RSI, UC_X86_REG_RDX, UC_X86_REG_RCX, UC_X86_REG_R8, UC_X86_REG_R9):
+                uc.reg_write(x, 0xdead)
     uc.hook_add(UC_HOOK_CODE, on_call, begin=FIND_LEVEL_GHOSTS, end=FIND_LEVEL_GHOSTS)
+    uc.hook_add(UC_HOOK_CODE, on_call, begin=ADD_STAT, end=ADD_STAT)
     uc.emu_start(CAVE, RETURN, count=100000)
 
     assert uc.reg_read(UC_X86_REG_RSP) == rsp + 8, 'did not return'
     assert not misaligned, 'stack not 16-byte aligned at the call'
     assert uc.reg_read(UC_X86_REG_RAX) == 0x1111111111111101, 'rax (al) not kept'
-    assert (uc.reg_read(UC_X86_REG_RBX), uc.reg_read(UC_X86_REG_R12)) == (0x2222, 0x3333), 'rbx/r12 not kept'
+    assert [uc.reg_read(x) for x in (UC_X86_REG_RBX, UC_X86_REG_R12, UC_X86_REG_R14, UC_X86_REG_R15)] == \
+        [0x2222, 0x3333, 0x4444, 0x5555], 'rbx/r12/r14/r15 not kept'
+    if stats is not None:
+        stats.extend(calls)
     new_index, = struct.unpack('<i', uc.mem_read(record + 0xc, 4))
     return new_index, uc.mem_read(manager + 0x30, 1)[0]
 
@@ -153,6 +188,41 @@ class BeatAll(unittest.TestCase):
         for bad in ('', 'x', 'data:\\Ghosts\\ghost.igb', 'data:\\Ghosts\\a-1x2-.igb', '79.0-.igb', 'a-79.0-.IGB'):
             with self.subTest(bad=bad):
                 self.assertEqual(run(index=1, raced=1, my_time=70.0, files=ROOS[:2] + [bad] + ROOS[3:]), (2, 1))
+
+    def stats(self, **race):
+        found = []
+        run(stats=found, **race)
+        return found
+
+    def test_stats_for_skipped_ghosts(self):
+        # The game counts the raced ghost itself; the patch adds the others it marks beaten.
+        self.assertEqual(self.stats(index=0, raced=0, my_time=78.0), [('beat_oxide_ghost', 0), ('beat_velo_ghost', 0)])
+        self.assertEqual(self.stats(index=0, raced=0, my_time=76.0),
+                         [('beat_oxide_ghost', 0), ('beat_velo_ghost', 0), ('beat_dev_ghost', 0)])
+        self.assertEqual(self.stats(index=2, raced=0, my_time=79.0), [('beat_velo_ghost', 0)])
+        self.assertEqual(self.stats(index=-1, raced=-1, my_time=90.0), [('beat_ntropy_ghost', 0)])
+
+    def test_no_extra_stats(self):
+        for race in (dict(index=2, raced=2, my_time=77.99), dict(index=0, raced=0, my_time=90.0),
+                     dict(index=-1, raced=-1, my_time=100.0), dict(index=2, raced=0, my_time=80.0),
+                     dict(index=4, raced=3, my_time=70.0), dict(index=0, raced=0, my_time=70.0, have_level=False)):
+            with self.subTest(**race):
+                self.assertEqual(self.stats(**race), [])
+
+    def test_owner_mystery_caves(self):
+        # The owner's run: only N. Tropy unlocked, raced him, 2:01.25. Developer is 2:00.62.
+        caves = [f'data:\\Ghosts\\t113_mystery_cavest113_mystery_caves-{t:.6f}-.igb'
+                 for t in (144.450928, 134.005127, 128.365356, 120.624634)]
+        found = []
+        self.assertEqual(run(index=0, raced=0, my_time=121.25, files=caves, stats=found), (3, 1))
+        self.assertEqual(found, [('beat_oxide_ghost', 0), ('beat_velo_ghost', 0)])
+
+    def test_stat_player(self):
+        # As the game picks it: the first player of type 7 or lower, else the first of 8 or higher
+        race = dict(index=0, raced=0, my_time=80.0)
+        self.assertEqual(self.stats(player_types=(9, 2, 5), **race), [('beat_oxide_ghost', 1)])
+        self.assertEqual(self.stats(player_types=(12, 9), **race), [('beat_oxide_ghost', 0)])
+        self.assertEqual(self.stats(player_types=(), **race), [('beat_oxide_ghost', None)])
 
     def test_real_ghost_table(self):
         table = real_ghost_table()

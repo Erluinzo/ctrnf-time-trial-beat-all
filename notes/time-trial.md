@@ -59,6 +59,13 @@ refers to it. tomtotom's drift gauge uses 0x2317820-0x23192df. This mod: 0x23380
 ## Open
 - Unlock Everything (`patch_unlock_all`) changes 18 unlock-condition functions; not checked
   whether they show all ghosts. Test this mod with it off.
-- Trophies 25/26 ("beat every N. Tropy / Oxide time") and Pit Stop challenges: not checked
-  whether they read the record index or the `beat_*_ghost` stats (the mod does not add stats
-  for skipped ghosts).
+- Character unlocks and trophies for N. Tropy / Oxide (race end after 0xfcc90e): 0xfcda70 returns
+  the lowest record index over all tracks (-1 if a track has none); >= 1 sets `_unlockedNTropy`
+  (+0x58), the Oxide check calls 0xfcdce0(..., 0x1a). They read the record index, which the mod
+  sets before this runs, so they were never blocked.
+- `beat_*_ghost` (0xfcc6e6, jump table 0x1cc1ae8: 0 ntropy, 1 oxide, 2 velo, 3 dev): only for the
+  raced ghost and only if you beat it. Call `0xaa2310(stats = [0x2aa48c0], name, player, 0, 0, 1)`;
+  player = first item of `[[0x2ad1160]+0x10]` with type (+0x20) <= 7, else first with >= 8, else 0.
+  0xaa2310 updates challenge progress (strings "X", "Y", "Progress"); nothing in SYS-DATA.sav, so it
+  likely only matters while a challenge is active. Since 1.0.1 the mod makes the same call for each
+  other ghost it marks beaten (index max(before,0) up to the new index, minus the raced one).

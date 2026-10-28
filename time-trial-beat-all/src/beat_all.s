@@ -4,7 +4,8 @@
 # "unlock the next ghost" step at 0xfcc890:
 #     if (record.unlockedChallengeGhostIndex == manager.raced_index) record.index++
 # That step moves at most one ghost per race. After it, this keeps moving to the next ghost
-# while that ghost's time is slower than yours.
+# while that ghost's time is slower than yours. Each ghost it marks beaten also counts in the
+# player stats (beat_ntropy_ghost...), as if you had raced it: the game counts only the raced one.
 #
 # Index of the track record: -1 nothing, 0 Tropy can be raced, 1 Oxide, 2 Velo, 3 Developer,
 # 4 all beaten. The track's _ghosts list is in the same order.
@@ -14,18 +15,26 @@
 #   [rbp-0x70] your race time (float)
 #   [rbp-0x80] level name, as passed to find_level_ghosts in the game's own code (0xf9b8ea)
 #   r13        ghost manager (+0x30 _unlockedNewGhost, +0x34 index of the ghost you raced)
+#   [r13+0x34] is also the stat the game already counted for this race (0xfcc6e6).
 # The caller still needs al after this returns. It sets every other caller-saved register again
 # before it reads it (0xfcc8a7 on), so this code may change them.
 
     .intel_syntax noprefix
     .set find_level_ghosts, 0xf9b970    # level name -> {_levelName, _unlockChallengeGhostsTime, _ghosts}, or 0
+    .set add_stat, 0xaa2310             # (stats, name, player, 0, 0, 1): adds 1 to a player stat
+# Game data, set by build.py (ld --defsym): with .set, "[rip + name]" would become a fixed offset
+# from this code instead of the data's address.
+#   g_players -> object, +0x10 player list; g_stats -> stats object;
+#   beat_ntropy_ghost, beat_oxide_ghost, beat_velo_ghost, beat_dev_ghost: the game's stat names
 
     .text
     .globl beat_all
 beat_all:
-    push rax                    # keeps al; three pushes also keep the stack 16-byte aligned
+    push rax                    # keeps al; five pushes also keep the stack 16-byte aligned
     push rbx
     push r12
+    push r14
+    push r15
     mov rbx, [rbp-0x40]
     mov r12d, [rbx+0xc]         # index before this race
 
@@ -124,8 +133,91 @@ save:
     je done
     mov [rbx+0xc], ecx
     mov byte ptr [r13+0x30], 1  # _unlockedNewGhost: the game shows its "new ghost" message
+
+    # Ghosts beaten in this race: index max(before, 0) up to the new index (-1 -> 0 only unlocks N. Tropy)
+    mov r14d, r12d
+    test r14d, r14d
+    jns 1f
+    xor r14d, r14d
+1:
+    mov r15d, ecx
+count_stat:
+    cmp r14d, r15d
+    jge done
+    cmp r14d, [r13+0x34]
+    je 2f                       # the game counted this one
+    mov edi, r14d
+    call add_beat_stat
+2:
+    inc r14d
+    jmp count_stat
+
 done:
+    pop r15
+    pop r14
     pop r12
     pop rbx
     pop rax
+    ret
+
+# Adds 1 to the "beat ghost" stat of ghost index edi (0 N. Tropy, 1 Oxide, 2 Velo, 3 Developer),
+# the same call the game makes for the raced ghost (0xfcc704).
+add_beat_stat:
+    sub rsp, 8                  # keeps the stack aligned for the call
+    lea rsi, [rip + beat_ntropy_ghost]
+    cmp edi, 1
+    jb have_name
+    lea rsi, [rip + beat_oxide_ghost]
+    je have_name
+    lea rsi, [rip + beat_velo_ghost]
+    cmp edi, 3
+    jb have_name
+    lea rsi, [rip + beat_dev_ghost]
+    ja stat_done
+have_name:
+    # The player, as the game picks it: the first one of type 7 or lower (+0x20), else the
+    # first one of type 8 or higher, else none
+    mov rdi, [rip + g_stats]
+    xor edx, edx
+    mov rax, [rip + g_players]
+    test rax, rax
+    jz call_add
+    mov rax, [rax+0x10]
+    test rax, rax
+    jz call_add
+    movsxd r8, dword ptr [rax+0xc]
+    mov r9, [rax+0x20]
+    test r9, r9
+    jz call_add
+    xor r10d, r10d
+find_low:
+    cmp r10, r8
+    jge low_none
+    mov r11, [r9+r10*8]
+    inc r10
+    test r11, r11
+    jz find_low
+    cmp dword ptr [r11+0x20], 7
+    ja find_low
+    mov rdx, r11
+    jmp call_add
+low_none:
+    xor r10d, r10d
+find_high:
+    cmp r10, r8
+    jge call_add
+    mov r11, [r9+r10*8]
+    inc r10
+    test r11, r11
+    jz find_high
+    cmp dword ptr [r11+0x20], 8
+    jb find_high
+    mov rdx, r11
+call_add:
+    xor ecx, ecx
+    xor r8d, r8d
+    mov r9d, 1
+    call add_stat
+stat_done:
+    add rsp, 8
     ret
