@@ -19,8 +19,8 @@
   "files": [
     {
       "file": "README.txt",
-      "sha256": "ad64b435f7b2748676fcd49e10d78cd98d2da5f2e9b8f4c427b076876d56eed5",
-      "bytes": 1212
+      "sha256": "f63b01b4d4435738fc8c8a5bd807ab0dd8843b0ea592ce1554b41b01d997f2f3",
+      "bytes": 1362
     },
     {
       "file": "octr-mod.required",
@@ -29,8 +29,8 @@
     },
     {
       "file": "patches/TimeTrialBeatAll.xml",
-      "sha256": "551220f6c5e7d1b0fe97b349703433af7bf76b2ce4f612eea9f76fd6faf8cb45",
-      "bytes": 1823
+      "sha256": "c6f7ad8f34c50c9691f832b9ba0ecd05ea38a07e3c1af2021abbe051a297dbe4",
+      "bytes": 2259
     }
   ]
 }
