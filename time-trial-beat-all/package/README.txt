@@ -1,5 +1,5 @@
 Time Trial: Beat Every Ghost at Once 0.1.1
-Author: Neox
+Author: Onur
 
 In Time Trial the game unlocks only one ghost per race: the one after the ghost you
 raced. With this mod, one race counts every ghost on the track that is slower than

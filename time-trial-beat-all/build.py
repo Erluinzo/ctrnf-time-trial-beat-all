@@ -70,7 +70,7 @@ def main():
   <TitleID><ID>CUSA13795</ID></TitleID>
   <Metadata Title="Crash Team Racing Nitro-Fueled" Name="Time Trial: Beat Every Ghost at Once"
             Note="One Time Trial run unlocks every ghost slower than your time, not only the next one."
-            Author="Neox" PatchVer="0.1.1" AppVer="01.21" AppElf="eboot.bin">
+            Author="Onur" PatchVer="0.1.1" AppVer="01.21" AppElf="eboot.bin">
     <PatchList>
 {line(HOOK, hook, signature)}
 {line(CAVE, cave)}

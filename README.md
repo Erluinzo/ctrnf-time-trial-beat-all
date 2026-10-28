@@ -1,6 +1,6 @@
 # CTRNF-Mods
 
-Neox's mods for Crash Team Racing Nitro-Fueled on the OCTR PC port
+Onur's mods for Crash Team Racing Nitro-Fueled on the OCTR PC port
 ([Ryu7w7/OCTR-NitroFueled-PC](https://github.com/Ryu7w7/OCTR-NitroFueled-PC)).
 
 | Mod | What it does |
