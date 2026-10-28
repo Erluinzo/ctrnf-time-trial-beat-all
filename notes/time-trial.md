@@ -31,6 +31,11 @@ Index: -1 nothing, 0 N. Tropy can be raced, 1 Oxide, 2 Velo, 3 Developer, 4 all 
 Static challenge ghost table (`_challengeGhosts` at +0x10 of the object from 0xf9ba00):
 - per track: +0x10 `_levelName`, +0x18 `_unlockChallengeGhostsTime` (float), +0x20 `_ghosts`
 - per ghost: +0x10 `_kartName`, +0x18 `_driverName`, +0x20 `_time` (float), +0x28 `_ghostFile`
+- `_time` is 999.0 for all 173 ghosts (placeholder; 0.1.0 used it and unlocked everything). The real
+  time is in `_ghostFile`: `data:\Ghosts\t112_roos_tubest112_roos_tubes-76.877319-.igb`, equal to the
+  file's `ghost_time`, which the game compares for the raced ghost.
+- The table is `looseData/GhostData.igz`; the newest copy is in `update2.pak` (also `update.pak`,
+  `permanent.pak`). 40 tracks, 4 ghosts each, plus one empty entry (no name, no list).
 - lists: +0x0c count, +0x20 pointer array. `_ghosts` order = index (Tropy, Oxide, Velo, Developer).
 
 The ghost files (`orig/CUSA13795/ghosts/*.igb`) also hold the time, as `ghost_time` and in the
