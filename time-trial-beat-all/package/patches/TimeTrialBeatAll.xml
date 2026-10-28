@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Built by build.py from src/beat_all.s: edit those, not this file.
+     Line 1: at the end of a Time Trial, the ghost manager (ELF 0xfcc430) unlocks only the ghost
+     after the one you raced. The hook replaces that step with a call to line 2.
+     Line 2: new code in unused padding; it does the game's step, then keeps unlocking while the
+     next ghost on the track is slower than your time. -->
+<Patch>
+  <TitleID><ID>CUSA13795</ID></TitleID>
+  <Metadata Title="Crash Team Racing Nitro-Fueled" Name="Time Trial: Beat Every Ghost at Once"
+            Note="One Time Trial run unlocks every ghost slower than your time, not only the next one."
+            Author="Neox" PatchVer="0.1.0" AppVer="01.21" AppElf="eboot.bin">
+    <PatchList>
+      <Line Type="bytes" Address="0x013cc890" Value="e86bb73601eb1090909090909090909090909090909090" Signature="8a 45 b7 48 8b 55 c0 8b 4a 0c 41 3b 4d 34 75 0a ff c1 89 4a 0c 41 c6 45 30 01" SignatureOffset="0x3" ExpectedSHA256="dfab122f6a11c107415ba30b8c63302dc1b859b0d299857bf890dd4957f8b7d7" />
+      <Line Type="bytes" Address="0x02738000" Value="50534154488b5dc0448b630c4489e1413b4d347502ffc185c978435151488b7d80e84a39c6fe59594885c07431488b40204885c074288b500c488b4020c5fa10459039d17d18488b34c84885f6740fc5fa104e20c5f82ec87604ffc1ebe44439e17408894b0c41c6453001415c5b58c3" ExpectedSHA256="b5fdab78d8947eacc864bfeecb4d2100780e5afe1cd8efafb124887913ac49fa" />
+    </PatchList>
+  </Metadata>
+</Patch>

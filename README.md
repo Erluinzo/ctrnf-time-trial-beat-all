@@ -1,0 +1,28 @@
+# CTRNF-Mods
+
+Neox's mods for Crash Team Racing Nitro-Fueled on the OCTR PC port
+([Ryu7w7/OCTR-NitroFueled-PC](https://github.com/Ryu7w7/OCTR-NitroFueled-PC)).
+
+| Mod | What it does |
+|---|---|
+| [time-trial-beat-all](time-trial-beat-all/) | One Time Trial run unlocks every ghost slower than your time |
+
+## Layout
+- `<mod>/package/`: what goes into the mod ZIP (`mod.json`, `README.txt`, `patches/`)
+- `<mod>/src/`: assembly source of new game code
+- `<mod>/build.py`: builds the patch XML from the source; `<mod>/test_*.py`: emulator tests
+- `tools/elf_look.py`: find texts, references, calls and functions in the game executable
+- `notes/`: what was found in the game code
+
+## Build a mod
+Needs the OCTR checkout next to this folder (`../CTRNF`, with `out/eboot.elf` from a build),
+binutils (`as`, `ld`, `objcopy`) and `pip install unicorn capstone`.
+
+```sh
+cd time-trial-beat-all
+python3 build.py                 # writes package/patches/TimeTrialBeatAll.xml
+python3 test_beat_all.py
+python3 ../../CTRNF/scripts/package_mod.py package --output ../dist/time-trial-beat-all-<version>.zip
+```
+
+No game files go into this repository or into the mods.
