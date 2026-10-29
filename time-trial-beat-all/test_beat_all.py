@@ -2,12 +2,12 @@
 """Runs the built patch code (from package/patches/TimeTrialBeatAll.xml) in a CPU emulator,
 with fake game objects shaped like the real ones, and checks which ghosts it unlocks.
 
-  python3 test_beat_all.py      (needs: pip install unicorn)
+  python3 test_beat_all.py      (needs: pip install unicorn; EU=1 tests the EU edition)
 
 The real ghost table test reads looseData/GhostData.igz from the game in ../../CTRNF
 (skipped when it is not there).
 """
-import re, struct, sys, unittest
+import os, re, struct, sys, unittest
 from pathlib import Path
 from unicorn import Uc, UC_ARCH_X86, UC_MODE_64, UC_HOOK_CODE
 from unicorn.x86_const import UC_X86_REG_RAX, UC_X86_REG_RBX, UC_X86_REG_R12, UC_X86_REG_R13, \
@@ -16,13 +16,17 @@ from unicorn.x86_const import UC_X86_REG_RAX, UC_X86_REG_RBX, UC_X86_REG_R12, UC
 
 HERE = Path(__file__).resolve().parent
 GAME = HERE.parent.parent / 'CTRNF'
-XML = (HERE / 'package/patches/TimeTrialBeatAll.xml').read_text()
+# EU=1 tests the EU edition's XML with its addresses (build.py EDITIONS)
+sys.path.insert(0, str(HERE))
+from build import EDITIONS
+EDITION = EDITIONS['CUSA14876' if os.environ.get('EU') == '1' else 'CUSA13795']
+XML = EDITION['xml'].read_text()
 LINES = {int(a, 16) - 0x400000: bytes.fromhex(v) for a, v in re.findall(r'Address="(0x[0-9a-f]+)" Value="([0-9a-f]+)"', XML)}
 CAVE = 0x2338000
-FIND_LEVEL_GHOSTS = 0xf9b970
-ADD_STAT, G_PLAYERS, G_STATS = 0xaa2310, 0x2ad1160, 0x2aa48c0
-STAT_NAMES = {0x1cdb1d7: 'beat_ntropy_ghost', 0x1cdb1e9: 'beat_oxide_ghost', 0x1cdb1fa: 'beat_velo_ghost',
-              0x1cdb20a: 'beat_dev_ghost'}
+FIND_LEVEL_GHOSTS = EDITION['game']['find_level_ghosts']
+ADD_STAT, G_PLAYERS, G_STATS = (EDITION['game'][k] for k in ('add_stat', 'g_players', 'g_stats'))
+STAT_NAMES = {EDITION['game'][name]: name for name in ('beat_ntropy_ghost', 'beat_oxide_ghost', 'beat_velo_ghost',
+                                                      'beat_dev_ghost')}
 STATS_OBJECT, PLAYERS = 0x2aa5000, 0x2ad2000
 DATA, STACK, RETURN = 0x10000000, 0x20000000, 0x30000000
 

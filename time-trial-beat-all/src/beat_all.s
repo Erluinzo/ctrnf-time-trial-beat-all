@@ -20,10 +20,10 @@
 # before it reads it (0xfcc8a7 on), so this code may change them.
 
     .intel_syntax noprefix
-    .set find_level_ghosts, 0xf9b970    # level name -> {_levelName, _unlockChallengeGhostsTime, _ghosts}, or 0
-    .set add_stat, 0xaa2310             # (stats, name, player, 0, 0, 1): adds 1 to a player stat
-# Game data, set by build.py (ld --defsym): with .set, "[rip + name]" would become a fixed offset
-# from this code instead of the data's address.
+# Game code and data, set by build.py for each edition (ld --defsym): with .set, "[rip + name]"
+# would become a fixed offset from this code instead of the data's address.
+#   find_level_ghosts: level name -> {_levelName, _unlockChallengeGhostsTime, _ghosts}, or 0
+#   add_stat: (stats, name, player, 0, 0, 1): adds 1 to a player stat
 #   g_players -> object, +0x10 player list; g_stats -> stats object;
 #   beat_ntropy_ghost, beat_oxide_ghost, beat_velo_ghost, beat_dev_ghost: the game's stat names
 
