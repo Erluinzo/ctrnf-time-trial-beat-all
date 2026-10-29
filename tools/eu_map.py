@@ -7,9 +7,11 @@ Both executables have the same functions in the same order (from .eh_frame_hdr);
 (0xe71d60, 10 bytes shorter in EU) have the same size, moved by 0, -0x10 or -0x20. So:
 - an address inside a function: the same function of EU, same offset; checked by comparing the next
   instructions (same lengths and mnemonics; jump and data targets may differ because code moved);
-- any other address (data, vtables, strings, import stubs): every USA instruction that uses it
+- any other address (data, strings, import stubs): every USA instruction that uses it
   (RIP-relative operand or call/jmp rel32) is found, mapped as above, decoded in EU, and its target
-  read there. All of them must agree.
+  read there. All of them must agree;
+- a vtable no code refers to: the same place in EU if its entries are the mapped functions.
+  eu_map.py func ADDR... compares whole functions (instructions, ignoring moved targets).
 """
 import bisect, struct, sys
 from pathlib import Path
@@ -121,15 +123,24 @@ class Mapper:
                 diffs.append(f'{x.address:#x} {x.mnemonic} {x.op_str} | EU {y.address:#x} {y.mnemonic} {y.op_str}')
         return diffs
 
+    def vtable(self, ua, n=8):
+        """A vtable no code refers to: the same place in EU when its first n entries are the mapped functions"""
+        for i in range(n):
+            a, = struct.unpack_from('<Q', self.u.data, self.u.off(ua + 8 * i))
+            b, = struct.unpack_from('<Q', self.e.data, self.e.off(ua + 8 * i))
+            if self.code(a) != b: raise ValueError(f'{ua:#x}: not a vtable at the same place (entry {i})')
+        return ua
+
     def map(self, ua):
         """(EU address, how)"""
+        ea = self.code(ua)
+        if ea is not None: return ea, 'function'
         try:
-            ea = self.code(ua)
-            if ea is not None: return ea, 'function'
-        except ValueError:
-            raise
-        ea, n = self.data(ua)
-        return ea, f'{n} references'
+            ea, n = self.data(ua)
+            return ea, f'{n} references'
+        except ValueError as e:
+            if 'no code refers' not in str(e): raise
+            return self.vtable(ua), 'vtable, same entries'
 
 
 if __name__ == '__main__':
