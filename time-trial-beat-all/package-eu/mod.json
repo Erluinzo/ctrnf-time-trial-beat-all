@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 2,
+  "id": "time-trial-beat-all-eu",
+  "name": "Time Trial: Beat Every Ghost at Once (EU)",
+  "version": "1.1.0",
+  "author": "Onur",
+  "description": "When you finish a Time Trial, every ghost whose time is slower than yours counts as beaten, not only the ghost you raced. One good run unlocks N. Tropy, Oxide, Velo and Developer at once.",
+  "requiresCapabilities": [
+    "xml-patches",
+    "code-signatures"
+  ],
+  "compatibility": {
+    "online": "offline-only"
+  },
+  "operations": [],
+  "patches": [
+    "patches/TimeTrialBeatAll-EU.xml"
+  ],
+  "files": [
+    {
+      "file": "README.txt",
+      "sha256": "4c68c358b90ef959c994665ebbb24444edbfcdc7c2587d0d3c97e58954eb821b",
+      "bytes": 1738
+    },
+    {
+      "file": "octr-mod.required",
+      "sha256": "2d5586c93e82ea2dbaaf8ddd5fc63068a0399479ef9824fb49c477b62a4ccc26",
+      "bytes": 19
+    },
+    {
+      "file": "patches/TimeTrialBeatAll-EU.xml",
+      "sha256": "297a6dc23b34a9a5105ef59ef76be0b6e52cda0b670cffa70592348691fb9d35",
+      "bytes": 2271
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Runs the built patch code (from package/patches/TimeTrialBeatAll.xml) in a CPU emulator,
+"""Runs the built patch code (from package/patches/TimeTrialBeatAll.xml or package-eu/patches/TimeTrialBeatAll-EU.xml) in a CPU emulator,
 with fake game objects shaped like the real ones, and checks which ghosts it unlocks.
 
   python3 test_beat_all.py      (needs: pip install unicorn; EU=1 tests the EU edition)

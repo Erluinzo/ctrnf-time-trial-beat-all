@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
-"""Builds the patch from src/beat_all.s, one XML per game edition (the launcher needs each XML to
-target one edition):
-  package/patches/TimeTrialBeatAll.xml        USA CUSA13795 1.21
-  package-eu/patches/TimeTrialBeatAll.xml     EU CUSA14876 1.21
+"""Builds the patch from src/beat_all.s, one mod package per game edition (the launcher needs each
+package's XML to target one edition, and cannot pick between two ZIPs of one mod id):
+  package/patches/TimeTrialBeatAll.xml           USA CUSA13795 1.21
+  package-eu/patches/TimeTrialBeatAll-EU.xml     EU CUSA14876 1.21, with mod.json and README.txt made from package/
   python3 build.py
 
 Each edition's executable is only read, to check the original bytes and to compute the
 ExpectedSHA256 values the launcher checks before it applies the patch. The EU addresses were found
 with ../tools/eu_map.py (same functions, moved by 0 to -0x40).
 """
-import hashlib, subprocess, sys, tempfile
+import hashlib, json, shutil, subprocess, sys, tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 GAME_DIR = HERE.parent.parent / 'CTRNF'
+VERSION = '1.1.0'
 EBOOT_BASE = 0x400000       # patch XML addresses are ELF addresses + 0x400000
 HOOK_ORIGINAL = bytes.fromhex('488b55c0 8b4a0c 413b4d34 750a ffc1 894a0c 41c6453001')
 CAVE = 0x2338000            # unused zero padding at the end of the code segment (USA 0x2317810-0x233c078,
@@ -29,7 +30,7 @@ EDITIONS = {
               'beat_ntropy_ghost': 0x1cdb1d7, 'beat_oxide_ghost': 0x1cdb1e9, 'beat_velo_ghost': 0x1cdb1fa,
               'beat_dev_ghost': 0x1cdb20a}),
     'CUSA14876': dict(
-        name='EU', elf=GAME_DIR / 'orig/CUSA14876-eboot.elf', xml=HERE / 'package-eu/patches/TimeTrialBeatAll.xml',
+        name='EU', elf=GAME_DIR / 'orig/CUSA14876-eboot.elf', xml=HERE / 'package-eu/patches/TimeTrialBeatAll-EU.xml',
         test_copy=GAME_DIR / 'patches/TimeTrialBeatAll-EU.xml', hook=0xfcc880, hook_end=0xfcc897, manager=0xfcc420,
         game={'find_level_ghosts': 0xf9b960, 'add_stat': 0xaa2310, 'g_players': 0x2ad1160, 'g_stats': 0x2aa48c0,
               'beat_ntropy_ghost': 0x1cdb197, 'beat_oxide_ghost': 0x1cdb1a9, 'beat_velo_ghost': 0x1cdb1ba,
@@ -90,7 +91,7 @@ def build(title, e):
   <TitleID><ID>{title}</ID></TitleID>
   <Metadata Title="Crash Team Racing Nitro-Fueled" Name="Time Trial: Beat Every Ghost at Once"
             Note="One Time Trial run unlocks every ghost slower than your time, not only the next one."
-            Author="Onur" PatchVer="1.0.1" AppVer="01.21" AppElf="eboot.bin">
+            Author="Onur" PatchVer="{VERSION}" AppVer="01.21" AppElf="eboot.bin">
     <PatchList>
 {line(hook_at, hook, signature)}
 {line(CAVE, cave)}
@@ -107,9 +108,20 @@ def build(title, e):
         print(f'test copy, switched on: {e["test_copy"]}')
 
 
+def eu_package():
+    """package-eu/ gets the USA package's README and manifest, with its own id and name"""
+    manifest = json.loads((HERE / 'package/mod.json').read_text())
+    assert manifest['version'] == VERSION, 'package/mod.json has another version'
+    manifest.update(id=manifest['id'] + '-eu', name=manifest['name'] + ' (EU)',
+                    patches=['patches/TimeTrialBeatAll-EU.xml'], files=[])
+    (HERE / 'package-eu/mod.json').write_text(json.dumps(manifest, indent=2) + '\n')
+    shutil.copy(HERE / 'package/README.txt', HERE / 'package-eu/README.txt')
+
+
 def main():
     for title, e in EDITIONS.items():
         build(title, e)
+    eu_package()
 
 
 if __name__ == '__main__':

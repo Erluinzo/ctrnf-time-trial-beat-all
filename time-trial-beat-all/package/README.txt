@@ -1,4 +1,4 @@
-Time Trial: Beat Every Ghost at Once 1.0.1
+Time Trial: Beat Every Ghost at Once 1.1.0
 Author: Onur
 
 In Time Trial the game unlocks only one ghost per race: the one after the ghost you
@@ -13,19 +13,26 @@ Developer ghost is ready to race.
 The first run on a track works the same way: if you beat the track's unlock time
 and also N. Tropy's time, N. Tropy counts as beaten.
 
-GAME: Crash Team Racing Nitro-Fueled, USA (CUSA13795) version 1.21, OCTR launcher
-with code-signature support. The launcher checks the game code before it applies
-the patch and refuses it on any other game build. The EU edition is not supported.
+GAME: Crash Team Racing Nitro-Fueled version 1.21, OCTR launcher with
+code-signature support. There is one ZIP per game edition:
+  time-trial-beat-all-<version>.zip      USA (CUSA13795)
+  time-trial-beat-all-eu-<version>.zip   EU (CUSA14876), shown as "(EU)"
+Use only the one for your game: with the other one enabled, the game does not
+start ("executable patch targets a different game edition/version"). The
+launcher checks the game code before it applies the patch.
 
 ONLINE: offline only.
 
-INSTALL: Mods > Add files, choose this ZIP, enable it, fully restart the game.
+INSTALL: Mods > Add files, choose the ZIP for your game, enable it, fully
+restart the game. Back up your save first.
+UPDATE: add the new ZIP and remove the old one.
 UNINSTALL: disable or remove it. Ghosts you already unlocked stay unlocked.
-Back up your save first.
 
 Every ghost that counts as beaten also counts for challenges that count beaten
 ghosts, as if you had raced it.
 
 CHANGES
+1.1.0: EU edition (CUSA14876) supported, as a second ZIP. The patch does the
+same as 1.0.1.
 1.0.1: ghosts beaten together with the raced one now also count for challenges
 (1.0.0 counted only the raced ghost there). Unlocks were already correct.
